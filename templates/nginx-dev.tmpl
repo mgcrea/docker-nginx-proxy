@@ -1,4 +1,8 @@
-{{ $CurrentContainer := where $ "ID" .Docker.CurrentContainerID | first }}
+{{ if .Env.NGINX_DOCKER_CONTAINER }}
+{{ $NginxContainer := where $ "Name" .Env.NGINX_DOCKER_CONTAINER | first }}
+{{ else }}
+{{ $NginxContainer := where $ "ID" .Docker.CurrentContainerID | first }}
+{{ end }}
 
 {{ define "upstream" }}
   {{ if .Address }}
@@ -82,7 +86,7 @@ upstream {{ $host }} {
 {{ range $container := $containers }}
   {{ $addrLen := len $container.Addresses }}
 
-  {{ range $knownNetwork := $CurrentContainer.Networks }}
+  {{ range $knownNetwork := $NginxContainer.Networks }}
     {{ range $containerNetwork := $container.Networks }}
       {{ if eq $knownNetwork.Name $containerNetwork.Name }}
         # via network {{ $containerNetwork.Name }}
