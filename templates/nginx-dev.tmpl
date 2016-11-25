@@ -31,7 +31,7 @@ upstream {{ trim .Host }}{{ .Suffix }} {
 {{ define "upstream" }}
   {{ if .Address }}
     {{/* If we got the containers from swarm and this container's port is published to host, use host IP:PORT */}}
-    {{ if and .Container.Node.ID .Address.HostPort }}
+    {{ if (and .Container.Node.ID .Address.HostPort) }}
   # container: {{ .Container.Node.Name }}/{{ .Container.Name }}
   server {{ .Container.Node.Address.IP }}:{{ .Address.HostPort }};
     {{/* If there is no swarm node or the port is not published on host, use container's IP:PORT */}}
@@ -62,7 +62,7 @@ upstream {{ trim .Host }}{{ .Suffix }} {
     {{ else if (exists "/etc/nginx/vhost.d/default_location") }}
     include /etc/nginx/vhost.d/default_location;
     {{ end }}
-    {{ if .Suffix }}
+    {{ if (and .Suffix (not (eq .Path "/"))) }}
     rewrite {{ .Path }}/(.*) /$1 break;
     {{ end }}
   }
