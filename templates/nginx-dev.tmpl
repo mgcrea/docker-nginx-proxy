@@ -45,7 +45,7 @@ upstream {{ trim .Host }}{{ .Suffix }} {
   {{ end }}
 {{ end }}
 
-{{ define "location" }}
+{{ define "location-block" }}
   location {{ .Path }} {
     {{ if eq .Proto "uwsgi" }}
     include uwsgi_params;
@@ -61,6 +61,9 @@ upstream {{ trim .Host }}{{ .Suffix }} {
     include {{ printf "/etc/nginx/vhost.d/%s_location" .Host}};
     {{ else if (exists "/etc/nginx/vhost.d/default_location") }}
     include /etc/nginx/vhost.d/default_location;
+    {{ end }}
+    {{ if .Suffix }}
+    rewrite {{ .Path }}/(.*) /$1 break;
     {{ end }}
   }
 {{ end }}
@@ -126,7 +129,17 @@ server {
 
 {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
 
-{{ template "upstream-block" (dict "Host" $host "Suffix" "" "Containers" $containers "NginxContainer" $nginxContainer )}}
+{{/* Get the VIRTUAL_PATH defined by containers w/ the same vhost, falling back to "/" */}}
+{{ $paths := groupByKeys $containers "Env.VIRTUAL_PATH" }}
+
+{{/* template:upstream-block */}}
+{{ if $paths }}
+  {{ range $index, $path := $paths }}
+    {{ template "upstream-block" (dict "Host" $host "Suffix" (printf "-%s" (sha1 $path)) "Containers" (where $containers "Env.VIRTUAL_PATH" $path) "NginxContainer" $nginxContainer) }}
+  {{ end }}
+{{ else }}
+  {{ template "upstream-block" (dict "Host" $host "Suffix" "" "Containers" $containers "NginxContainer" $nginxContainer) }}
+{{ end }}
 
 {{ $default_host := or ($.Env.DEFAULT_HOST) "" }}
 {{ $default_server := index (dict $host "" $default_host "default_server") $host }}
@@ -193,7 +206,14 @@ server {
   include /etc/nginx/vhost.d/default;
   {{ end }}
 
-  {{ template "location" (dict "Path" "/" "Proto" $proto "Host" $host "Suffix" "" ) }}
+  {{/* template:location-block */}}
+  {{ if $paths }}
+    {{ range $index, $path := $paths }}
+      {{ template "location-block" (dict "Path" $path "Proto" $proto "Host" $host "Suffix" (printf "-%s" (sha1 $path))) }}
+    {{ end }}
+  {{ else }}
+    {{ template "location-block" (dict "Path" "/" "Proto" $proto "Host" $host "Suffix" "") }}
+  {{ end }}
 }
 
 {{ end }}
@@ -211,7 +231,14 @@ server {
   include /etc/nginx/vhost.d/default;
   {{ end }}
 
-  {{ template "location" (dict "Path" "/" "Proto" $proto "Host" $host "Suffix" "" ) }}
+  {{/* template:location-block */}}
+  {{ if $paths }}
+    {{ range $index, $path := $paths }}
+      {{ template "location-block" (dict "Path" $path "Proto" $proto "Host" $host "Suffix" (printf "-%s" (sha1 $path))) }}
+    {{ end }}
+  {{ else }}
+    {{ template "location-block" (dict "Path" "/" "Proto" $proto "Host" $host "Suffix" "") }}
+  {{ end }}
 }
 
 {{ if (and (not $is_https) (exists "/etc/nginx/certs/default.crt") (exists "/etc/nginx/certs/default.key")) }}
