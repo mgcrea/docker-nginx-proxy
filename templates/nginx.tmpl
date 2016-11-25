@@ -85,7 +85,7 @@ upstream {{ $host }} {
   {{ range $knownNetwork := $CurrentContainer.Networks }}
     {{ range $containerNetwork := $container.Networks }}
       {{ if eq $knownNetwork.Name $containerNetwork.Name }}
-        ## Can be connect with "{{ $containerNetwork.Name }}" network
+        # via network {{ $containerNetwork.Name }}
         {{/* If only 1 port exposed, use that */}}
         {{ if eq $addrLen 1 }}
           {{ $address := index $container.Addresses 0 }}
@@ -175,8 +175,8 @@ server {
     proxy_pass {{ trim $proto }}://{{ trim $host }};
     {{ end }}
     {{ if (exists (printf "/etc/nginx/htpasswd/%s" $host)) }}
-    auth_basic  "Restricted {{ $host }}";
-    auth_basic_user_file    {{ (printf "/etc/nginx/htpasswd/%s" $host) }};
+    auth_basic "Restricted {{ $host }}";
+    auth_basic_user_file {{ (printf "/etc/nginx/htpasswd/%s" $host) }};
     {{ end }}
     {{ if (exists (printf "/etc/nginx/vhost.d/%s_location" $host)) }}
     include {{ printf "/etc/nginx/vhost.d/%s_location" $host}};
@@ -209,8 +209,8 @@ server {
     proxy_pass {{ trim $proto }}://{{ trim $host }};
     {{ end }}
     {{ if (exists (printf "/etc/nginx/htpasswd/%s" $host)) }}
-    auth_basic  "Restricted {{ $host }}";
-    auth_basic_user_file    {{ (printf "/etc/nginx/htpasswd/%s" $host) }};
+    auth_basic "Restricted {{ $host }}";
+    auth_basic_user_file {{ (printf "/etc/nginx/htpasswd/%s" $host) }};
     {{ end }}
     {{ if (exists (printf "/etc/nginx/vhost.d/%s_location" $host)) }}
     include {{ printf "/etc/nginx/vhost.d/%s_location" $host}};
