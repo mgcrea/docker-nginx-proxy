@@ -1,5 +1,5 @@
 
-{{ $nginxContainer := where $ "Name" (coalesce .Env.NGINX_DOCKER_CONTAINER "nginx") | first }}
+{{ $nginxContainer := where $ "Name" (coalesce .Env.NGINX_DOCKER_CONTAINER "nginx_proxy") | first }}
 
 {{ define "upstream-block" }}
 {{ $nginxContainer := .NginxContainer }}
