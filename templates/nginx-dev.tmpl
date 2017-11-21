@@ -1,5 +1,6 @@
 
 {{ $nginxContainer := where $ "Name" (coalesce .Env.NGINX_DOCKER_CONTAINER "nginx_proxy") | first }}
+{{ $nginxContainerNetwork := where $nginxContainer.Networks "Name" (coalesce .Env.NGINX_DOCKER_NETWORK "nginxproxy_default") | first }}
 
 {{ define "upstream-block" }}
 {{ $nginxContainer := .NginxContainer }}
@@ -114,6 +115,17 @@ server {
   return 503;
 }
 
+server {
+    listen 80;
+    server_name {{ $nginxContainerNetwork.IP }} {{ (coalesce .Env.NGINX_DOCKER_CONTAINER "nginx_proxy") }}.docker;
+
+    location /server_status {
+      stub_status;
+      allow {{ $nginxContainerNetwork.Gateway }}/12;
+      deny all;
+    }
+}
+
 {{ if (and (exists "/etc/nginx/certs/default.crt") (exists "/etc/nginx/certs/default.key")) }}
 server {
   server_name _; # This is just an invalid value which will never trigger on a real hostname.
@@ -172,6 +184,13 @@ server {
   server_name {{ $host }};
   listen 80 {{ $default_server }};
   access_log /var/log/nginx/access.log vhost;
+
+  {{ if (exists (printf "/etc/nginx/vhost.d/%s" $host)) }}
+  include {{ printf "/etc/nginx/vhost.d/%s" $host }};
+  {{ else if (exists "/etc/nginx/vhost.d/default") }}
+  include /etc/nginx/vhost.d/default;
+  {{ end }}
+
   return 301 https://$host$request_uri;
 }
 {{ end }}
